@@ -1,6 +1,10 @@
 package frc.robot.subsystems.swerve;
 
 import com.kauailabs.navx.frc.AHRS;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
+import com.pathplanner.lib.util.PIDConstants;
+import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -77,6 +81,21 @@ public class Swerve extends SubsystemBase {
     public Swerve() {
         resetGyroHardware();
 
+        AutoBuilder.configureHolonomic(
+                this::getPose2d,
+                this::setPose2d,
+                this::getRobotRelativeSpeeds,
+                this::driveRobotRelative,
+                new HolonomicPathFollowerConfig(
+                        new PIDConstants(TRANSLATION_GAINS.kp, 0.0, TRANSLATION_GAINS.kd),
+                        new PIDConstants(ANGLE_GAINS.kp, 0.0, ANGLE_GAINS.kd),
+                        MAX_VELOCITY_METER_PER_SECOND,
+                        Math.sqrt(2) * TRACK_WIDTH,
+                        new ReplanningConfig()
+                ),
+                this
+        );
+
         odometry.resetPosition(getGyroRotation2d(), getModulesPositions(), new Pose2d(0, 0, new Rotation2d()));
         resetOdometryAngleCommand();
 
@@ -116,6 +135,10 @@ public class Swerve extends SubsystemBase {
         return odometry.getEstimatedPosition().getRotation();
     }
 
+    public ChassisSpeeds getRobotRelativeSpeeds(){
+        return kSwerveKinematics.toChassisSpeeds(getModulesStates());
+    }
+
     public Command setOdometryPositionCommand(Pose2d pose) {
         return new InstantCommand(() -> setPose2d(pose));
     }
@@ -151,9 +174,9 @@ public class Swerve extends SubsystemBase {
                                     double spinning = turnToAngle.getAsDouble() == -1 ? spinningSpeedSupplier.getAsDouble() : getAngleDC(turnToAngle.getAsDouble());
 
                                     //create the speeds for x,y and spin
-                                    double xSpeed = xLimiter.calculate(xSpeedSupplier.getAsDouble()) * MAX_DRIVING_SPEED / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
-                                            ySpeed = yLimiter.calculate(ySpeedSupplier.getAsDouble()) * MAX_DRIVING_SPEED / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
-                                            spinningSpeed = spinningLimiter.calculate(spinning) * MAX_DRIVING_SPEED / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble());
+                                    double xSpeed = xLimiter.calculate(xSpeedSupplier.getAsDouble()) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
+                                            ySpeed = yLimiter.calculate(ySpeedSupplier.getAsDouble()) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
+                                            spinningSpeed = spinningLimiter.calculate(spinning) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble());
 
                                     // **all credits to the decelerator idea are for Ofir from trigon #5990 (ohfear_ on discord)**
 
@@ -182,6 +205,10 @@ public class Swerve extends SubsystemBase {
 
     public Command tankDriveCommand(DoubleSupplier speed, DoubleSupplier turn, boolean fieldOriented) {
         return driveSwerveCommand(speed, () -> 0, turn, () -> fieldOriented);
+    }
+
+    private void driveRobotRelative(ChassisSpeeds chassisSpeeds){
+        setModulesStates(kSwerveKinematics.toSwerveModuleStates(chassisSpeeds));
     }
 
     public Command straightenModulesCommand() {
@@ -257,6 +284,14 @@ public class Swerve extends SubsystemBase {
                 swerveModules[1].getPosition(),
                 swerveModules[2].getPosition(),
                 swerveModules[3].getPosition(),
+        };
+    }
+    public SwerveModuleState[] getModulesStates() {
+        return new SwerveModuleState[]{
+                swerveModules[0].getState(),
+                swerveModules[1].getState(),
+                swerveModules[2].getState(),
+                swerveModules[3].getState(),
         };
     }
 
