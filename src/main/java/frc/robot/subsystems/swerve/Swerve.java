@@ -10,6 +10,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
@@ -70,6 +71,8 @@ public class Swerve extends SubsystemBase {
             new Pose2d());
 
     private final Field2d field = new Field2d();
+
+    private GenericEntry maxSpeed = Shuffleboard.getTab("Swerve").add("speedPercent", DRIVE_SPEED_PERCENTAGE).withPosition(2, 0).withSize(2, 2).getEntry();
 
     public Swerve() {
         resetGyroHardware();
@@ -148,9 +151,9 @@ public class Swerve extends SubsystemBase {
                                     double spinning = turnToAngle.getAsDouble() == -1 ? spinningSpeedSupplier.getAsDouble() : getAngleDC(turnToAngle.getAsDouble());
 
                                     //create the speeds for x,y and spin
-                                    double xSpeed = xLimiter.calculate(xSpeedSupplier.getAsDouble()) * MAX_DRIVING_SPEED * getSwerveDeceleratorVal(decelerator.getAsDouble()),
-                                            ySpeed = yLimiter.calculate(ySpeedSupplier.getAsDouble()) * MAX_DRIVING_SPEED * getSwerveDeceleratorVal(decelerator.getAsDouble()),
-                                            spinningSpeed = spinningLimiter.calculate(spinning) * MAX_TURNING_SPEED * getSwerveDeceleratorVal(decelerator.getAsDouble());
+                                    double xSpeed = xLimiter.calculate(xSpeedSupplier.getAsDouble()) * MAX_DRIVING_SPEED / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
+                                            ySpeed = yLimiter.calculate(ySpeedSupplier.getAsDouble()) * MAX_DRIVING_SPEED / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
+                                            spinningSpeed = spinningLimiter.calculate(spinning) * MAX_DRIVING_SPEED / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble());
 
                                     // **all credits to the decelerator idea are for Ofir from trigon #5990 (ohfear_ on discord)**
 
