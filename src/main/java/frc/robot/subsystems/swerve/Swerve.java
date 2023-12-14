@@ -90,7 +90,7 @@ public class Swerve extends SubsystemBase {
                         new PIDConstants(TRANSLATION_GAINS.kp, 0.0, TRANSLATION_GAINS.kd),
                         new PIDConstants(ANGLE_GAINS.kp, 0.0, ANGLE_GAINS.kd),
                         MAX_VELOCITY_METER_PER_SECOND,
-                        Math.sqrt(2) * TRACK_WIDTH,
+                        Math.sqrt(2) * TRACK_WIDTH, // needs to change for a non-square swerve
                         new ReplanningConfig()
                 ),
                 this
