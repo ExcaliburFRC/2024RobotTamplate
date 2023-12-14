@@ -32,9 +32,9 @@ public class RobotContainer {
   private void configureBindings() {
     swerve.setDefaultCommand(
             swerve.driveSwerveCommand(
-                    controller::getLeftY,
-                    controller::getLeftX,
-                    controller::getRightX,
+                    ()-> - controller.getLeftY(),
+                    ()-> -controller.getLeftX(),
+                    ()-> -controller.getRightX(),
                     controller.L2(),
                     controller::getR2Axis,
                     ()-> getAngleFromButtons(controller.triangle(), controller.circle(), controller.cross(), controller.square()))

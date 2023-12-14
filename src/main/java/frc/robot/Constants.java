@@ -25,10 +25,10 @@ public final class Constants {
     public static final class SwerveConstants {
         public enum Modules {
             // drive ID, spin ID, abs encoder channel, offset angle, drive reversed, angle reversed
-            FL(18, 17, 5, 0.842, false, true),
-            FR(12, 11, 9, 0.122, false, true),
-            BL(16, 15, 4, 0.55, false, true),
-            BR(14, 13, 8, 0.3339, false, true);
+            FL(18, 17, 5, 0.842, true, true),
+            FR(12, 11, 9, 0.122, true, true),
+            BL(16, 15, 4, 0.55, true, true),
+            BR(14, 13, 8, 0.3339, true, true);
 
 
             public int DRIVE_MOTOR_ID;
