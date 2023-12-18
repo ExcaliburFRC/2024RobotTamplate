@@ -4,16 +4,18 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.PS5Controller;
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
 import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.LEDs;
 import frc.robot.subsystems.swerve.Swerve;
 
+import static edu.wpi.first.math.MathUtil.applyDeadband;
 import static frc.lib.Color.Colors.WHITE;
 import static frc.robot.subsystems.LEDs.LEDPattern.SOLID;
 
@@ -23,7 +25,7 @@ public class RobotContainer {
   private final LEDs leds = LEDs.getInstance();
 
   // controllers
-  private final CommandPS5Controller controller = new CommandPS5Controller(0);
+  private final CommandPS4Controller controller = new CommandPS4Controller(0);
 
   public RobotContainer() {
     configureBindings();
@@ -32,10 +34,10 @@ public class RobotContainer {
   private void configureBindings() {
     swerve.setDefaultCommand(
             swerve.driveSwerveCommand(
-                    controller::getLeftY,
-                    controller::getLeftX,
-                    controller::getRightX,
-                    controller.L2(),
+                    ()-> applyDeadband(-controller.getLeftY(), 0.05),
+                    ()-> applyDeadband(-controller.getLeftX(), 0.05),
+                    ()-> applyDeadband(-controller.getRightX(), 0.05),
+                    controller.L2().negate(),
                     controller::getR2Axis,
                     ()-> getAngleFromButtons(controller.triangle(), controller.circle(), controller.cross(), controller.square()))
             );
@@ -59,6 +61,6 @@ public class RobotContainer {
   }
 
   public Command getAutonomousCommand() {
-    return null;
+    return new RunCommand(()-> System.out.println(controller.getRightY()));
   }
 }

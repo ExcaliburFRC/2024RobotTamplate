@@ -25,10 +25,10 @@ public final class Constants {
     public static final class SwerveConstants {
         public enum Modules {
             // drive ID, spin ID, abs encoder channel, offset angle, drive reversed, angle reversed
-            FL(18, 17, 5, 0.842, false, true),
-            FR(12, 11, 9, 0.122, false, true),
-            BL(16, 15, 4, 0.55, false, true),
-            BR(14, 13, 8, 0.3339, false, true);
+            FL(18, 17, 5, 0.842, true, true),
+            FR(12, 11, 9, 0.122, true, true),
+            BL(16, 15, 4, 0.55, true, true),
+            BR(14, 13, 8, 0.3339, true, true);
 
 
             public int DRIVE_MOTOR_ID;
@@ -59,23 +59,18 @@ public final class Constants {
         }
 
         public static final double TRACK_WIDTH = 0.56665; // m
-        public static final double WHEEL_BASE = 0.56665; // m
         public static final SwerveDriveKinematics kSwerveKinematics = new SwerveDriveKinematics(
-                        new Translation2d(WHEEL_BASE / 2, TRACK_WIDTH / 2),
-                        new Translation2d(WHEEL_BASE / 2, -TRACK_WIDTH / 2),
-                        new Translation2d(-WHEEL_BASE / 2, TRACK_WIDTH / 2),
-                        new Translation2d(-WHEEL_BASE / 2, -TRACK_WIDTH / 2));
+                        new Translation2d(TRACK_WIDTH / 2, TRACK_WIDTH / 2),
+                        new Translation2d(TRACK_WIDTH / 2, -TRACK_WIDTH / 2),
+                        new Translation2d(-TRACK_WIDTH / 2, TRACK_WIDTH / 2),
+                        new Translation2d(-TRACK_WIDTH / 2, -TRACK_WIDTH / 2));
 
         public static final double MAX_VELOCITY_METER_PER_SECOND = Units.feetToMeters(12);
         public static final double MAX_ANGULAR_VELOCITY_RAD_PER_SECOND = 2 * 2 * PI;
         public static final double MAX_ACCCEL_METER_PER_SECOND = 3;
 
-        public static final double RAMP_BALANCE_KP = 0.008;
-        public static final double RAMP_BALANCE_KD = 0.003;
-
         // intentional limitations
         public static final double DRIVE_SPEED_PERCENTAGE = 20; // %
-        public static final double MAX_DRIVING_SPEED = MAX_VELOCITY_METER_PER_SECOND / 100 * DRIVE_SPEED_PERCENTAGE; // m/s
         public static final double MAX_TURNING_SPEED = MAX_ANGULAR_VELOCITY_RAD_PER_SECOND / 100 * DRIVE_SPEED_PERCENTAGE;// rad/s
         public static final double MAX_TURNING_ACCEL = PI / 100 * DRIVE_SPEED_PERCENTAGE; // rad/s^2
         public static final double MINIMUM_SWERVE_SPEED = 0.25; // even when the decelerator is fully pressed, the swerve wouldn't drive below this speed

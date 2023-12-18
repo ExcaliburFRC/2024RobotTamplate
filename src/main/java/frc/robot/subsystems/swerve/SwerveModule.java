@@ -95,7 +95,7 @@ public class SwerveModule implements Sendable {
   }
 
   public SwerveModulePosition getPosition(){
-    return new SwerveModulePosition(-_driveMotor.getPosition(), Rotation2d.fromRadians(_angleMotor.getPosition()));
+    return new SwerveModulePosition(_driveMotor.getPosition(), Rotation2d.fromRadians(_angleMotor.getPosition()));
   }
 
   public void setDesiredState(SwerveModuleState state) {
