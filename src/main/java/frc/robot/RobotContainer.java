@@ -4,15 +4,13 @@
 
 package frc.robot;
 
-import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
-import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.LEDs;
+import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.swerve.Swerve;
 
 import static edu.wpi.first.math.MathUtil.applyDeadband;
@@ -22,10 +20,12 @@ import static frc.robot.subsystems.LEDs.LEDPattern.SOLID;
 public class RobotContainer {
   // subsystems
   private final Swerve swerve = new Swerve();
+  private final Superstructure superstructure = new Superstructure();
   private final LEDs leds = LEDs.getInstance();
 
   // controllers
-  private final CommandPS4Controller controller = new CommandPS4Controller(0);
+  private final CommandPS4Controller driver = new CommandPS4Controller(0);
+  private final CommandPS4Controller operator = new CommandPS4Controller(1);
 
   public RobotContainer() {
     configureBindings();
@@ -34,15 +34,28 @@ public class RobotContainer {
   private void configureBindings() {
     swerve.setDefaultCommand(
             swerve.driveSwerveCommand(
-                    ()-> applyDeadband(-controller.getLeftY(), 0.05),
-                    ()-> applyDeadband(-controller.getLeftX(), 0.05),
-                    ()-> applyDeadband(-controller.getRightX(), 0.05),
-                    controller.L2().negate(),
-                    controller::getR2Axis,
-                    ()-> getAngleFromButtons(controller.triangle(), controller.circle(), controller.cross(), controller.square()))
+                    ()-> applyDeadband(-driver.getLeftY(), 0.05),
+                    ()-> applyDeadband(-driver.getLeftX(), 0.05),
+                    ()-> applyDeadband(-driver.getRightX(), 0.05),
+                    driver.L2().negate(),
+                    driver::getR2Axis,
+                    ()-> getAngleFromButtons(driver.triangle(), driver.circle(), driver.cross(), driver.square()))
             );
 
-    controller.touchpad().whileTrue(toggleMotorsIdleMode().alongWith(leds.applyPatternCommand(SOLID, WHITE.color)));
+    driver.PS().onTrue(swerve.resetOdometryAngleCommand());
+
+    driver.touchpad().whileTrue(toggleMotorsIdleMode().alongWith(leds.applyPatternCommand(SOLID, WHITE.color)));
+
+    operator.R1().toggleOnTrue(superstructure.intakeFromShelfCommand());
+
+    // shoot / place commands
+    operator.triangle().toggleOnTrue(superstructure.placeOnHighCommand(driver.R1()));
+    operator.circle().toggleOnTrue(superstructure.placeOnMidCommand(driver.R1()));
+    operator.cross().toggleOnTrue(superstructure.placeOnLowCommand());
+
+    // other
+    operator.square().onTrue(superstructure.lockArmCommand());
+    operator.R2().onTrue(superstructure.arm.forceLockArm());
   }
 
   public double getAngleFromButtons(Trigger triangle, Trigger circle, Trigger cross, Trigger square){
@@ -61,6 +74,6 @@ public class RobotContainer {
   }
 
   public Command getAutonomousCommand() {
-    return new RunCommand(()-> System.out.println(controller.getRightY()));
+    return new RunCommand(()-> System.out.println(driver.getRightY()));
   }
 }
