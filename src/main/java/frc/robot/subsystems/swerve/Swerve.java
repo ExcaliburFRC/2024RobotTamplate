@@ -10,6 +10,9 @@ import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
+import edu.wpi.first.math.interpolation.Interpolator;
+import edu.wpi.first.math.interpolation.InverseInterpolator;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -68,6 +71,9 @@ public class Swerve extends SubsystemBase {
     private final PIDController anglePIDcontroller = new PIDController(ANGLE_GAINS.kp, ANGLE_GAINS.ki, ANGLE_GAINS.kd);
     private final PIDController translationPIDcontroller = new PIDController(TRANSLATION_GAINS.kp, TRANSLATION_GAINS.ki, TRANSLATION_GAINS.kd);
 
+
+    InterpolatingTreeMap interpolate = new InterpolatingTreeMap(InverseInterpolator.forDouble(), Interpolator.forDouble());
+
     private final SwerveDrivePoseEstimator odometry = new SwerveDrivePoseEstimator(
             kSwerveKinematics,
             getGyroRotation2d(),
@@ -103,6 +109,9 @@ public class Swerve extends SubsystemBase {
         anglePIDcontroller.setTolerance(1);
 
         initShuffleboardData();
+
+        interpolate.put(1.0, 0.2);
+        interpolate.put(-1.0, 1.0);
     }
 
     // gyro getters and setters
@@ -174,9 +183,9 @@ public class Swerve extends SubsystemBase {
                                     double spinning = turnToAngle.getAsDouble() == -1 ? spinningSpeedSupplier.getAsDouble() : getAngleDC(turnToAngle.getAsDouble());
 
                                     //create the speeds for x,y and spin
-                                    double xSpeed = xLimiter.calculate(xSpeedSupplier.getAsDouble()) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
-                                            ySpeed = yLimiter.calculate(ySpeedSupplier.getAsDouble()) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
-                                            spinningSpeed = spinningLimiter.calculate(spinning) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble());
+                                    double xSpeed = xLimiter.calculate(xSpeedSupplier.getAsDouble()) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble()),
+                                            ySpeed = yLimiter.calculate(ySpeedSupplier.getAsDouble()) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble()),
+                                            spinningSpeed = spinningLimiter.calculate(spinning) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
 
                                     // **all credits to the decelerator idea are for Ofir from trigon #5990 (ohfear_ on discord)**
 
@@ -257,10 +266,6 @@ public class Swerve extends SubsystemBase {
         return (val + 1) / 2;
     }
 
-    public static double getSwerveDeceleratorVal(double triggerVal){
-        return Math.max(1.0 - convertJoystickRange(triggerVal), MINIMUM_SWERVE_SPEED);
-    }
-
     // other methods
     private void resetAngleEncoders() {
         foreachModule(SwerveModule::resetEncoders);
@@ -331,5 +336,6 @@ public class Swerve extends SubsystemBase {
                 .withPosition(0, 2).withSize(4, 4);
         swerveTab.add("Field2d", field).withSize(9, 5).withPosition(12, 0);
         swerveTab.addDouble("robotPitch", this::getRobotPitch);
+
     }
 }

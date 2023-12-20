@@ -12,7 +12,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static frc.lib.Color.Colors.OFF;
+import static frc.lib.Color.Colors.*;
 import static frc.robot.Constants.LedsConstants.LEDS_PORT;
 import static frc.robot.Constants.LedsConstants.LENGTH;
 
@@ -30,7 +30,7 @@ public class LEDs extends SubsystemBase {
         LedStrip.setLength(LENGTH);
         LedStrip.start();
 
-//        setDefaultCommand(applyPatternCommand(LEDPattern.TRAIN_CIRCLE, BLUE.color, TEAM_GOLD.color));
+        setDefaultCommand(applyPatternCommand(LEDPattern.TRAIN_CIRCLE, BLUE.color, TEAM_GOLD.color));
     }
 
     public static LEDs getInstance() {

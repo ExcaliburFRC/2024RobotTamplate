@@ -44,7 +44,7 @@ public class Arm extends SubsystemBase {
     public final Trigger armLockedTrigger = armAngleClosedTrigger.and(armFullyOpenedTrigger);
 
     private final SparkMaxPIDController lengthController = lengthMotor.getPIDController();
-    private TrapezoidProfile trapezoidProfile = new TrapezoidProfile(new TrapezoidProfile.Constraints(0, 0), new TrapezoidProfile.State());
+    private TrapezoidProfile trapezoidProfile;
     private final Timer trapozoidTimer = new Timer();
 
     public static final ShuffleboardTab armTab = Shuffleboard.getTab("Arm");
@@ -169,13 +169,13 @@ public class Arm extends SubsystemBase {
         return new FunctionalCommand(
                 ()-> {
                     trapozoidTimer.restart();
-                    trapezoidProfile = new TrapezoidProfile(
-                            new TrapezoidProfile.Constraints(kMaxLinearVelocity, kMaxLinearAcceleration),
-                            new TrapezoidProfile.State(setpoint.getNorm(), 0),
-                            new TrapezoidProfile.State(lengthEncoder.getPosition(), lengthEncoder.getVelocity()));
+                    trapezoidProfile = new TrapezoidProfile(new TrapezoidProfile.Constraints(kMaxLinearVelocity, kMaxLinearAcceleration));
                 },
                 ()-> {
-                    TrapezoidProfile.State state = trapezoidProfile.calculate(trapozoidTimer.get());
+                    TrapezoidProfile.State state = trapezoidProfile.calculate(
+                            trapozoidTimer.get(),
+                            new TrapezoidProfile.State(setpoint.getNorm(), 0),
+                            new TrapezoidProfile.State(lengthEncoder.getPosition(), lengthEncoder.getVelocity()));
                     double feedforward = kS_LENGTH * Math.signum(state.velocity)
                             + kG_LENGTH * Math.sin(Units.degreesToRadians(getArmAngle()))
                             + kV_LENGTH * state.velocity;

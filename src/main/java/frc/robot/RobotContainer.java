@@ -43,19 +43,15 @@ public class RobotContainer {
             );
 
     driver.PS().onTrue(swerve.resetOdometryAngleCommand());
-
     driver.touchpad().whileTrue(toggleMotorsIdleMode().alongWith(leds.applyPatternCommand(SOLID, WHITE.color)));
 
-    operator.R1().toggleOnTrue(superstructure.intakeFromShelfCommand());
-
-    // shoot / place commands
     operator.triangle().toggleOnTrue(superstructure.placeOnHighCommand(driver.R1()));
     operator.circle().toggleOnTrue(superstructure.placeOnMidCommand(driver.R1()));
     operator.cross().toggleOnTrue(superstructure.placeOnLowCommand());
 
-    // other
     operator.square().onTrue(superstructure.lockArmCommand());
     operator.R2().onTrue(superstructure.arm.forceLockArm());
+    operator.R1().toggleOnTrue(superstructure.intakeFromShelfCommand());
   }
 
   public double getAngleFromButtons(Trigger triangle, Trigger circle, Trigger cross, Trigger square){
@@ -74,6 +70,6 @@ public class RobotContainer {
   }
 
   public Command getAutonomousCommand() {
-    return new RunCommand(()-> System.out.println(driver.getRightY()));
+    return null;
   }
 }
