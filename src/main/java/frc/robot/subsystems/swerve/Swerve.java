@@ -7,9 +7,11 @@ import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
+import edu.wpi.first.math.interpolation.Interpolator;
+import edu.wpi.first.math.interpolation.InverseInterpolator;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -78,6 +80,8 @@ public class Swerve extends SubsystemBase {
 
     private GenericEntry maxSpeed = Shuffleboard.getTab("Swerve").add("speedPercent", DRIVE_SPEED_PERCENTAGE).withPosition(2, 0).withSize(2, 2).getEntry();
 
+    private final InterpolatingTreeMap interpolate = new InterpolatingTreeMap(InverseInterpolator.forDouble(), Interpolator.forDouble());
+
     public Swerve() {
         resetGyroHardware();
 
@@ -101,6 +105,9 @@ public class Swerve extends SubsystemBase {
 
         anglePIDcontroller.enableContinuousInput(0, 360);
         anglePIDcontroller.setTolerance(1);
+
+        interpolate.put(1.0, 0.2);
+        interpolate.put(-1.0, 1.0);
 
         initShuffleboardData();
     }
@@ -162,11 +169,6 @@ public class Swerve extends SubsystemBase {
             DoubleSupplier decelerator,
             DoubleSupplier turnToAngle) {
 
-        final SlewRateLimiter
-                xLimiter = new SlewRateLimiter(MAX_DRIVING_ACCEL_PER_SECOND),
-                yLimiter = new SlewRateLimiter(MAX_DRIVING_ACCEL_PER_SECOND),
-                spinningLimiter = new SlewRateLimiter(MAX_ANGULAR_ACCEL_PER_SECOND);
-
         return new ConditionalCommand(new InstantCommand(), straightenModulesCommand(), () -> hasStraighten)
                 .andThen(
                         this.runEnd(
@@ -174,9 +176,9 @@ public class Swerve extends SubsystemBase {
                                     double spinning = turnToAngle.getAsDouble() == -1 ? spinningSpeedSupplier.getAsDouble() : getAngleDC(turnToAngle.getAsDouble());
 
                                     //create the speeds for x,y and spin
-                                    double xSpeed = xLimiter.calculate(xSpeedSupplier.getAsDouble()) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
-                                            ySpeed = yLimiter.calculate(ySpeedSupplier.getAsDouble()) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble()),
-                                            spinningSpeed = spinningLimiter.calculate(spinning) * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * getSwerveDeceleratorVal(decelerator.getAsDouble());
+                                    double xSpeed = xSpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble()),
+                                            ySpeed = ySpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble()),
+                                            spinningSpeed = spinning * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
 
                                     // **all credits to the decelerator idea are for Ofir from trigon #5990 (ohfear_ on discord)**
 
@@ -250,15 +252,6 @@ public class Swerve extends SubsystemBase {
 
     public double getAngleDC() {
         return getAngleDC(0);
-    }
-
-        // converts value from a -1 to 1 range to a 0 to 1 range
-    public static double convertJoystickRange(double val){
-        return (val + 1) / 2;
-    }
-
-    public static double getSwerveDeceleratorVal(double triggerVal){
-        return Math.max(1.0 - convertJoystickRange(triggerVal), MINIMUM_SWERVE_SPEED);
     }
 
     // other methods
