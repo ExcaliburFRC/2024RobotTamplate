@@ -86,7 +86,7 @@ public final class Constants {
         public static final double kTurningEncoderRPMToRadiansPerSec = kTurningEncoderRotationsToRadians / 60;
 
         public static final Gains MODULE_ANGLE_GAINS = new Gains(0.75, 0, 0);
-        public static final double TOLORANCE = 0.05;
+        public static final double TOLERANCE = 0.05;
 
         public static final int DRIVE_CURRENT_LIMIT = 65;
         public static final int ANGLE_CURRENT_LIMIT = 25;

@@ -89,7 +89,7 @@ public class Swerve extends SubsystemBase {
     private final Limelight ll = Limelight.INSTANCE;
 
     private GenericEntry maxSpeed = Shuffleboard.getTab("Swerve").add("speedPercent", DRIVE_SPEED_PERCENTAGE).withPosition(2, 0).withSize(2, 2).getEntry();
-
+// Create Interpolator instead of Decelarator
     private final InterpolatingTreeMap interpolate = new InterpolatingTreeMap(InverseInterpolator.forDouble(), Interpolator.forDouble());
 
     public Swerve() {
@@ -145,7 +145,7 @@ public class Swerve extends SubsystemBase {
         return _gyro.getRoll() - 0.46;
     }
 
-    // odometry getters and setters
+    // Odometry getters and setters
     private void setPose2d(Pose2d pose) {
         odometry.resetPosition(getGyroRotation2d(), getModulesPositions(), pose);
     }
@@ -200,7 +200,6 @@ public class Swerve extends SubsystemBase {
                                             ySpeed = ySpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble()),
                                             spinningSpeed = spinning * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
 
-                                    // **all credits to the decelerator idea are for Ofir from trigon #5990 (ohfear_ on discord)**
 
                                     // create a CassisSpeeds object and apply it the speeds
                                     ChassisSpeeds chassisSpeeds = fieldOriented.getAsBoolean() ?
