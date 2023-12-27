@@ -89,7 +89,7 @@ public class Swerve extends SubsystemBase {
     private final Limelight ll = Limelight.INSTANCE;
 
     private GenericEntry maxSpeed = Shuffleboard.getTab("Swerve").add("speedPercent", DRIVE_SPEED_PERCENTAGE).withPosition(2, 0).withSize(2, 2).getEntry();
-// Create Interpolator instead of Decelarator
+// Create Interpolator instead of Decelerator (*all thanks to Yehuda Rothstein)
     private final InterpolatingTreeMap interpolate = new InterpolatingTreeMap(InverseInterpolator.forDouble(), Interpolator.forDouble());
 
     public Swerve() {
