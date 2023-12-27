@@ -5,6 +5,8 @@ import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.targeting.PhotonPipelineResult;
 
 import java.io.IOException;
 import java.util.function.BiConsumer;
@@ -33,6 +35,13 @@ public class Limelight {
 
     public void setPipeline(int index){
         ll.setPipelineIndex(index);
+    }
+
+    public PhotonPipelineResult getLatestResualt(){
+        var result = ll.getLatestResult();
+
+        if (result != null) return result;
+        return new PhotonPipelineResult();
     }
 
     public boolean updateFromAprilTagPose(BiConsumer<Pose2d, Double> toUpdate) {
