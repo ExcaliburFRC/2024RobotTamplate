@@ -5,13 +5,10 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.ReplanningConfig;
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
 import edu.wpi.first.math.interpolation.Interpolator;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
@@ -27,10 +24,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.lib.Limelight;
-import org.photonvision.PhotonPoseEstimator;
 
-import java.io.IOException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
@@ -82,15 +76,17 @@ public class Swerve extends SubsystemBase {
             getModulesPositions(),
             new Pose2d());
 
-    private final PhotonPoseEstimator poseEstimator;
+//    private final PhotonPoseEstimator poseEstimator;
 
     private final Field2d field = new Field2d();
 
-    private final Limelight ll = Limelight.INSTANCE;
+//    private final Limelight ll = Limelight.INSTANCE;
 
     private GenericEntry maxSpeed = Shuffleboard.getTab("Swerve").add("speedPercent", DRIVE_SPEED_PERCENTAGE).withPosition(2, 0).withSize(2, 2).getEntry();
 
     private final InterpolatingTreeMap interpolate = new InterpolatingTreeMap(InverseInterpolator.forDouble(), Interpolator.forDouble());
+
+    private boolean isClosedloop = true;
 
     public Swerve() {
         resetGyroHardware();
@@ -119,15 +115,15 @@ public class Swerve extends SubsystemBase {
         interpolate.put(1.0, 0.2);
         interpolate.put(-1.0, 1.0);
 
-        try {
-            poseEstimator = new PhotonPoseEstimator(
-                    AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile),
-                    PhotonPoseEstimator.PoseStrategy.AVERAGE_BEST_TARGETS,
-                    new Transform3d()
-            );
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            poseEstimator = new PhotonPoseEstimator(
+//                    AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile),
+//                    PhotonPoseEstimator.PoseStrategy.AVERAGE_BEST_TARGETS,
+//                    new Transform3d()
+//            );
+//        } catch (IOException e) {
+//            throw new RuntimeException(e);
+//        }
 
         initShuffleboardData();
     }
@@ -193,14 +189,16 @@ public class Swerve extends SubsystemBase {
                 .andThen(
                         this.runEnd(
                                 () -> {
-                                    double spinning = turnToAngle.getAsDouble() == -1 ? spinningSpeedSupplier.getAsDouble() : getAngleDC(turnToAngle.getAsDouble());
+                                    double xSpeed = xSpeedSupplier.getAsDouble(), ySpeed = ySpeedSupplier.getAsDouble(), spinningSpeed = spinningSpeedSupplier.getAsDouble();
 
-                                    //create the speeds for x,y and spin
-                                    double xSpeed = xSpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble()),
-                                            ySpeed = ySpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble()),
-                                            spinningSpeed = spinning * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
+                                    if (!isClosedloop) {
+                                        double spinning = turnToAngle.getAsDouble() == -1 ? spinningSpeedSupplier.getAsDouble() : getAngleDC(turnToAngle.getAsDouble());
 
-                                    // **all credits to the decelerator idea are for Ofir from trigon #5990 (ohfear_ on discord)**
+                                        //create the speeds for x,y and spin
+                                        xSpeed = xSpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
+                                        ySpeed = ySpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
+                                        spinningSpeed = spinning * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
+                                    }
 
                                     // create a CassisSpeeds object and apply it the speeds
                                     ChassisSpeeds chassisSpeeds = fieldOriented.getAsBoolean() ?
@@ -254,11 +252,14 @@ public class Swerve extends SubsystemBase {
     }
 
     public Command turnToAngleCommand(double setpoint) {
-        return new InstantCommand(() -> anglePIDcontroller.setSetpoint(setpoint)).andThen(
+        return new InstantCommand(() -> {
+            this.isClosedloop = true;
+        }).andThen(
                 driveSwerveCommand(
                         () -> 0, () -> 0,
                         () -> anglePIDcontroller.calculate(getOdometryRotation2d().getDegrees(), setpoint),
-                        () -> false).until(new Trigger(anglePIDcontroller::atSetpoint).debounce(0.1)));
+                        () -> false).until(new Trigger(anglePIDcontroller::atSetpoint).debounce(0.1)),
+                setClosedLoop(false));
     }
 
     /**
@@ -322,15 +323,19 @@ public class Swerve extends SubsystemBase {
                 .ignoringDisable(true);
     }
 
+    public Command setClosedLoop(boolean isCloseLoop){
+        return new InstantCommand(()-> this.isClosedloop = isCloseLoop);
+    }
+
     @Override
     public void periodic() {
         odometry.update(getGyroRotation2d(), getModulesPositions());
-        field.setRobotPose(poseEstimator.getReferencePose().toPose2d());
+        field.setRobotPose(odometry.getEstimatedPosition());
         SmartDashboard.putData(field);
 
-        ll.updateFromAprilTagPose(odometry::addVisionMeasurement);
+//        ll.updateFromAprilTagPose(odometry::addVisionMeasurement);
 
-        poseEstimator.update(Limelight.INSTANCE.getLatestResualt());
+//        poseEstimator.update(Limelight.INSTANCE.getLatestResualt());
     }
 
     private void initShuffleboardData() {
@@ -347,5 +352,7 @@ public class Swerve extends SubsystemBase {
                 .withPosition(0, 2).withSize(4, 4);
         swerveTab.add("Field2d", field).withSize(9, 5).withPosition(12, 0);
         swerveTab.addDouble("robotPitch", this::getRobotPitch);
+
+        Shuffleboard.getTab("tune").addDouble("robotAngle", () -> getOdometryRotation2d().getDegrees());
     }
 }
