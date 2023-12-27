@@ -34,15 +34,17 @@ public class RobotContainer {
   private void configureBindings() {
     swerve.setDefaultCommand(
             swerve.driveSwerveCommand(
-                    ()-> applyDeadband(-controller.getLeftY(), 0.05),
-                    ()-> applyDeadband(-controller.getLeftX(), 0.05),
-                    ()-> applyDeadband(-controller.getRightX(), 0.05),
+                    ()-> applyDeadband(-controller.getLeftY(), 0.07),
+                    ()-> applyDeadband(-controller.getLeftX(), 0.07),
+                    ()-> applyDeadband(-controller.getRightX(), 0.07),
                     controller.L2().negate(),
                     controller::getR2Axis,
                     ()-> getAngleFromButtons(controller.triangle(), controller.circle(), controller.cross(), controller.square()))
             );
 
     controller.touchpad().whileTrue(toggleMotorsIdleMode().alongWith(leds.applyPatternCommand(SOLID, WHITE.color)));
+
+    controller.PS().onTrue(swerve.resetOdometryAngleCommand());
   }
 
   public double getAngleFromButtons(Trigger triangle, Trigger circle, Trigger cross, Trigger square){

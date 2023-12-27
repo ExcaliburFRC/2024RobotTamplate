@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.lib.Limelight;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -77,6 +78,8 @@ public class Swerve extends SubsystemBase {
             new Pose2d());
 
     private final Field2d field = new Field2d();
+
+    private final Limelight ll = Limelight.INSTANCE;
 
     private GenericEntry maxSpeed = Shuffleboard.getTab("Swerve").add("speedPercent", DRIVE_SPEED_PERCENTAGE).withPosition(2, 0).withSize(2, 2).getEntry();
 
@@ -247,6 +250,7 @@ public class Swerve extends SubsystemBase {
      * the returned value should be inserted into the driveCommand instead of the driver's input
      */
     public double getAngleDC(double angle) {
+        System.out.println(getOdometryRotation2d().getDegrees() + " " + angle);
         return anglePIDcontroller.calculate(getOdometryRotation2d().getDegrees(), angle);
     }
 
@@ -307,7 +311,7 @@ public class Swerve extends SubsystemBase {
         field.setRobotPose(odometry.getEstimatedPosition());
         SmartDashboard.putData(field);
 
-//        limelight.updateFromAprilTagPose(odometry::addVisionMeasurement);
+        ll.updateFromAprilTagPose(odometry::addVisionMeasurement);
     }
 
     private void initShuffleboardData() {

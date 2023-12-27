@@ -72,7 +72,7 @@ public final class Constants {
         public static final double DRIVE_SPEED_PERCENTAGE = 20; // %
 
         // autonomous constants
-        public static final Gains ANGLE_GAINS = new Gains(0.005733, 0, 3.51E-4);
+        public static final Gains ANGLE_GAINS = new Gains(0.01, 0, 0);
         public static final Gains TRANSLATION_GAINS = new Gains(0, 0, 0);
     }
     public static final class ModuleConstants {
