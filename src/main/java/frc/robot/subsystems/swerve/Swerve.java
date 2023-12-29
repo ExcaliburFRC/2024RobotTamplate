@@ -98,7 +98,8 @@ public class Swerve extends SubsystemBase {
                 this::driveRobotRelative,
                 new HolonomicPathFollowerConfig(
                         new PIDConstants(TRANSLATION_GAINS.kp, 0.0, TRANSLATION_GAINS.kd),
-                        new PIDConstants(ANGLE_GAINS.kp, 0.0, ANGLE_GAINS.kd),
+                        new PIDConstants(1.3
+                                , 0.0, ANGLE_GAINS.kd),
                         MAX_VELOCITY_METER_PER_SECOND,
                         Math.sqrt(2) * TRACK_WIDTH, // needs to change for a non-square swerve
                         new ReplanningConfig()
@@ -229,6 +230,8 @@ public class Swerve extends SubsystemBase {
 
     private void driveRobotRelative(ChassisSpeeds chassisSpeeds){
         setModulesStates(kSwerveKinematics.toSwerveModuleStates(chassisSpeeds));
+
+        new PrintCommand(""+chassisSpeeds.omegaRadiansPerSecond).schedule();
     }
 
     public Command straightenModulesCommand() {

@@ -12,6 +12,12 @@
     "data": {
       "commands": [
         {
+          "type": "wait",
+          "data": {
+            "waitTime": 1.0
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "Example Path"
@@ -20,5 +26,6 @@
       ]
     }
   },
-  "folder": null
+  "folder": null,
+  "choreoAuto": false
 }

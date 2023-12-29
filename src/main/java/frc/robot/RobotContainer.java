@@ -5,6 +5,8 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathPlannerAuto;
+import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
@@ -60,6 +62,8 @@ public class RobotContainer {
   }
 
   public Command getAutonomousCommand() {
-    return AutoBuilder.buildAuto("111");
+    PathPlannerPath path = PathPlannerPath.fromPathFile("Example Path");
+    return AutoBuilder.followPathWithEvents(path);
+//    return new PathPlannerAuto("111");
   }
 }
