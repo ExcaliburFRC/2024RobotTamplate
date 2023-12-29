@@ -55,7 +55,6 @@ public final class Constants {
                 this.DRIVE_MOTOR_REVERSED = DRIVE_MOTOR_REVERSED;
                 this.SPIN_MOTOR_REVERSED = SPIN_MOTOR_REVERSED;
             }
-
         }
 
         public static final double TRACK_WIDTH = 0.56665; // m
@@ -73,8 +72,10 @@ public final class Constants {
 
         // autonomous constants
         public static final Gains ANGLE_GAINS = new Gains(0.07, 0, 1.0E-04);
-//        public static final Gains ANGLE_GAINS = new Gains(0, 0, 0);
-        public static final Gains TRANSLATION_GAINS = new Gains(0, 0, 0);
+        public static final Gains TRANSLATION_GAINS = new Gains(0.07, 0, 1.0E-04);
+
+        public static final Gains PATHPLANNER_ANGLE_GAINS = new Gains(3.25, 0, 0);
+        public static final Gains PATHPLANNER_TRANSLATION_GAINS = new Gains(2.5, 0, 0);
     }
     public static final class ModuleConstants {
 

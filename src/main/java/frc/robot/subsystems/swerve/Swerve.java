@@ -68,7 +68,7 @@ public class Swerve extends SubsystemBase {
     private final AHRS _gyro = new AHRS(SPI.Port.kMXP);
 
     private final PIDController anglePIDcontroller = new PIDController(ANGLE_GAINS.kp, ANGLE_GAINS.ki, ANGLE_GAINS.kd);
-    private final PIDController translationPIDcontroller = new PIDController(TRANSLATION_GAINS.kp, TRANSLATION_GAINS.ki, TRANSLATION_GAINS.kd);
+    private final PIDController translationPIDcontroller = new PIDController(PATHPLANNER_TRANSLATION_GAINS.kp, PATHPLANNER_TRANSLATION_GAINS.ki, PATHPLANNER_TRANSLATION_GAINS.kd);
 
     private final SwerveDrivePoseEstimator odometry = new SwerveDrivePoseEstimator(
             kSwerveKinematics,
@@ -97,14 +97,12 @@ public class Swerve extends SubsystemBase {
                 this::getRobotRelativeSpeeds,
                 this::driveRobotRelative,
                 new HolonomicPathFollowerConfig(
-                        new PIDConstants(TRANSLATION_GAINS.kp, 0.0, TRANSLATION_GAINS.kd),
-                        new PIDConstants(1.3
-                                , 0.0, ANGLE_GAINS.kd),
+                        new PIDConstants(PATHPLANNER_TRANSLATION_GAINS.kp, 0.0, PATHPLANNER_TRANSLATION_GAINS.kd),
+                        new PIDConstants(PATHPLANNER_ANGLE_GAINS.kp, 0.0, PATHPLANNER_ANGLE_GAINS.kd),
                         MAX_VELOCITY_METER_PER_SECOND,
                         Math.sqrt(2) * TRACK_WIDTH, // needs to change for a non-square swerve
                         new ReplanningConfig()
-                ),
-                this
+                ), this
         );
 
         odometry.resetPosition(getGyroRotation2d(), getModulesPositions(), new Pose2d(0, 0, new Rotation2d()));
@@ -159,7 +157,7 @@ public class Swerve extends SubsystemBase {
         return odometry.getEstimatedPosition().getRotation();
     }
 
-    public ChassisSpeeds getRobotRelativeSpeeds(){
+    public ChassisSpeeds getRobotRelativeSpeeds() {
         return kSwerveKinematics.toChassisSpeeds(getModulesStates());
     }
 
@@ -228,10 +226,9 @@ public class Swerve extends SubsystemBase {
         return driveSwerveCommand(speed, () -> 0, turn, () -> fieldOriented);
     }
 
-    private void driveRobotRelative(ChassisSpeeds chassisSpeeds){
+    private void driveRobotRelative(ChassisSpeeds chassisSpeeds) {
         setModulesStates(kSwerveKinematics.toSwerveModuleStates(chassisSpeeds));
-
-        new PrintCommand(""+chassisSpeeds.omegaRadiansPerSecond).schedule();
+        System.out.println(odometry.getEstimatedPosition().toString());
     }
 
     public Command straightenModulesCommand() {
@@ -255,9 +252,7 @@ public class Swerve extends SubsystemBase {
     }
 
     public Command turnToAngleCommand(double setpoint) {
-        return new InstantCommand(() -> {
-            this.isClosedloop = true;
-        }).andThen(
+        return setClosedLoop(true).andThen(
                 driveSwerveCommand(
                         () -> 0, () -> 0,
                         () -> anglePIDcontroller.calculate(getOdometryRotation2d().getDegrees(), setpoint),
@@ -304,6 +299,7 @@ public class Swerve extends SubsystemBase {
                 swerveModules[3].getPosition(),
         };
     }
+
     public SwerveModuleState[] getModulesStates() {
         return new SwerveModuleState[]{
                 swerveModules[0].getState(),
@@ -326,8 +322,8 @@ public class Swerve extends SubsystemBase {
                 .ignoringDisable(true);
     }
 
-    public Command setClosedLoop(boolean isCloseLoop){
-        return new InstantCommand(()-> this.isClosedloop = isCloseLoop);
+    public Command setClosedLoop(boolean isCloseLoop) {
+        return new InstantCommand(() -> this.isClosedloop = isCloseLoop);
     }
 
     @Override
@@ -355,7 +351,5 @@ public class Swerve extends SubsystemBase {
                 .withPosition(0, 2).withSize(4, 4);
         swerveTab.add("Field2d", field).withSize(9, 5).withPosition(12, 0);
         swerveTab.addDouble("robotPitch", this::getRobotPitch);
-
-        Shuffleboard.getTab("tune").addDouble("robotAngle", () -> getOdometryRotation2d().getDegrees());
     }
 }
