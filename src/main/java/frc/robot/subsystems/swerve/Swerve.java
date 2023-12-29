@@ -5,10 +5,13 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.ReplanningConfig;
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
 import edu.wpi.first.math.interpolation.Interpolator;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
@@ -24,7 +27,12 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.lib.Limelight;
+import org.photonvision.EstimatedRobotPose;
+import org.photonvision.PhotonPoseEstimator;
 
+import java.io.IOException;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
@@ -76,11 +84,8 @@ public class Swerve extends SubsystemBase {
             getModulesPositions(),
             new Pose2d());
 
-//    private final PhotonPoseEstimator poseEstimator;
-
     private final Field2d field = new Field2d();
-
-//    private final Limelight ll = Limelight.INSTANCE;
+    private final Limelight limelight = Limelight.INSTANCE;
 
     private GenericEntry maxSpeed = Shuffleboard.getTab("Swerve").add("speedPercent", DRIVE_SPEED_PERCENTAGE).withPosition(2, 0).withSize(2, 2).getEntry();
 
@@ -88,7 +93,7 @@ public class Swerve extends SubsystemBase {
 
     private boolean isClosedloop = true;
 
-    public Swerve() {
+    public Swerve(){
         resetGyroHardware();
 
         AutoBuilder.configureHolonomic(
@@ -113,16 +118,6 @@ public class Swerve extends SubsystemBase {
 
         interpolate.put(1.0, 0.2);
         interpolate.put(-1.0, 1.0);
-
-//        try {
-//            poseEstimator = new PhotonPoseEstimator(
-//                    AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile),
-//                    PhotonPoseEstimator.PoseStrategy.AVERAGE_BEST_TARGETS,
-//                    new Transform3d()
-//            );
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
 
         initShuffleboardData();
     }
@@ -329,12 +324,13 @@ public class Swerve extends SubsystemBase {
     @Override
     public void periodic() {
         odometry.update(getGyroRotation2d(), getModulesPositions());
+
+        Optional<EstimatedRobotPose> pose = limelight.getEstimatedGlobalPose(odometry.getEstimatedPosition());
+        System.out.println(pose.isEmpty());
+        if (!pose.isEmpty()) odometry.addVisionMeasurement(pose.get().estimatedPose.toPose2d(), pose.get().timestampSeconds);
+
         field.setRobotPose(odometry.getEstimatedPosition());
         SmartDashboard.putData(field);
-
-//        ll.updateFromAprilTagPose(odometry::addVisionMeasurement);
-
-//        poseEstimator.update(Limelight.INSTANCE.getLatestResualt());
     }
 
     private void initShuffleboardData() {
