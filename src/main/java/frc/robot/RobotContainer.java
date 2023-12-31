@@ -5,6 +5,10 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathfindHolonomic;
+import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.path.PathPlannerTrajectory;
+import com.pathplanner.lib.pathfinding.Pathfinding;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -40,12 +44,13 @@ public class RobotContainer {
                     ()-> applyDeadband(-controller.getRightX(), 0.07),
                     controller.L2().negate(),
                     controller::getR2Axis,
-                    ()-> getAngleFromButtons(controller.triangle(), controller.circle(), controller.cross(), controller.square()))
-            );
+                    ()-> -1));
 
     controller.touchpad().whileTrue(toggleMotorsIdleMode().alongWith(leds.applyPatternCommand(SOLID, WHITE.color)));
 
     controller.PS().onTrue(swerve.resetOdometryAngleCommand());
+
+    controller.cross().onTrue(swerve.followPath());
   }
 
   public double getAngleFromButtons(Trigger triangle, Trigger circle, Trigger cross, Trigger square){
@@ -55,6 +60,7 @@ public class RobotContainer {
     if (square.getAsBoolean()) return 270;
     return -1;
   }
+  // getAngleFromButtons(controller.triangle(), controller.circle(), controller.cross(), controller.square()))
 
   public Command toggleMotorsIdleMode() {
     return new ParallelCommandGroup(
@@ -65,6 +71,6 @@ public class RobotContainer {
 
   public Command getAutonomousCommand() {
 //    return new PathPlannerAuto("Auto1");
-    return swerve.followPath(swerve.getBezierPoints(new Translation2d(0, 0)), 0, 0);
+    return swerve.followPath(0, 0, new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
   }
 }

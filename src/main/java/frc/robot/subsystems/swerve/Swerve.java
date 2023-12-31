@@ -28,6 +28,8 @@ import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.Limelight;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -219,7 +221,6 @@ public class Swerve extends SubsystemBase {
 
     private void driveRobotRelative(ChassisSpeeds chassisSpeeds) {
         setModulesStates(kSwerveKinematics.toSwerveModuleStates(chassisSpeeds));
-        System.out.println(odometry.getEstimatedPosition().toString());
     }
 
     public Command straightenModulesCommand() {
@@ -327,20 +328,30 @@ public class Swerve extends SubsystemBase {
 //
         field.setRobotPose(odometry.getEstimatedPosition());
 //        SmartDashboard.putData(field);
+
+        System.out.println(odometry.getEstimatedPosition().toString());
     }
 
     // on-the-fly auto generation functions
-    public Command followPath(List<Translation2d> bezierPoints, double endVel, double endDegrees){
+    public Command followPath(double endVel, double endDegrees, Pose2d... positions){
         return AutoBuilder.followPathWithEvents(
-                new PathPlannerPath(bezierPoints, PATH_CONSTRAINTS, getGoalEndState(endVel, endDegrees)));
+                new PathPlannerPath(
+                        PathPlannerPath.bezierFromPoses(getPositions(positions)),
+                        PATH_CONSTRAINTS,
+                        new GoalEndState(endVel, Rotation2d.fromDegrees(endDegrees))))
+                .until(()-> positions[positions.length -1].getTranslation().getDistance(odometry.getEstimatedPosition().getTranslation()) < 0.15);
     }
 
-    public List<Translation2d> getBezierPoints(Translation2d... points){
-        return List.of(points);
+    public Command followPath(){
+        return followPath(0, 0, new Pose2d(0,0, Rotation2d.fromDegrees(0)));
     }
 
-    public GoalEndState getGoalEndState(double vel, double degrees){
-        return new GoalEndState(vel, Rotation2d.fromDegrees(degrees));
+    private ArrayList<Pose2d> getPositions(Pose2d... poses){
+        ArrayList<Pose2d> arrayList = new ArrayList<>();
+        arrayList.add(odometry.getEstimatedPosition());
+        arrayList.addAll(Arrays.asList(poses));
+
+        return arrayList;
     }
     // ----------
 
