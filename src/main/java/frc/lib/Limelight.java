@@ -22,7 +22,7 @@ public class Limelight {
 
     private final Transform3d robotToCamera = new Transform3d();
 
-    public static Limelight INSTANCE = new Limelight();
+    public static Limelight INSTANCE;// = new Limelight();
 
     private Limelight() {
         camera.setDriverMode(false);

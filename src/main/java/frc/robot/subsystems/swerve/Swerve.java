@@ -325,12 +325,12 @@ public class Swerve extends SubsystemBase {
     public void periodic() {
         odometry.update(getGyroRotation2d(), getModulesPositions());
 
-        Optional<EstimatedRobotPose> pose = limelight.getEstimatedGlobalPose(odometry.getEstimatedPosition());
-        System.out.println(pose.isEmpty());
-        if (!pose.isEmpty()) odometry.addVisionMeasurement(pose.get().estimatedPose.toPose2d(), pose.get().timestampSeconds);
-
+//        Optional<EstimatedRobotPose> pose = limelight.getEstimatedGlobalPose(odometry.getEstimatedPosition());
+//        System.out.println(pose.isEmpty());
+//        if (!pose.isEmpty()) odometry.addVisionMeasurement(pose.get().estimatedPose.toPose2d(), pose.get().timestampSeconds);
+//
         field.setRobotPose(odometry.getEstimatedPosition());
-        SmartDashboard.putData(field);
+//        SmartDashboard.putData(field);
     }
 
     private void initShuffleboardData() {

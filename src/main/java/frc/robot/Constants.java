@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
@@ -64,8 +65,11 @@ public final class Constants {
                         new Translation2d(-TRACK_WIDTH / 2, TRACK_WIDTH / 2),
                         new Translation2d(-TRACK_WIDTH / 2, -TRACK_WIDTH / 2));
 
-        public static final double MAX_VELOCITY_METER_PER_SECOND = Units.feetToMeters(12);
-        public static final double MAX_ANGULAR_VELOCITY_RAD_PER_SECOND = 2 * 2 * PI;
+        public static final double MAX_VELOCITY_METER_PER_SECOND = Units.feetToMeters(12); //TODO: find values
+        public static final double MAX_VELOCITY_ACCELERATION_METER_PER_SECOND = 3; //TODO: find values
+
+        public static final double MAX_ANGULAR_VELOCITY_RAD_PER_SECOND = 2 * 2 * PI; //TODO: find values
+        public static final double MAX_ANGULAR_ACCELERATION_RAD_PER_SECOND = 1.5 * 2 * PI; //TODO: find values
 
         // intentional limitations
         public static final double DRIVE_SPEED_PERCENTAGE = 20; // %
@@ -76,6 +80,10 @@ public final class Constants {
 
         public static final Gains PATHPLANNER_ANGLE_GAINS = new Gains(3.25, 0, 0);
         public static final Gains PATHPLANNER_TRANSLATION_GAINS = new Gains(2.5, 0, 0);
+
+        public static final PathConstraints PATH_CONSTRAINTS = new PathConstraints(
+                MAX_VELOCITY_METER_PER_SECOND, MAX_VELOCITY_ACCELERATION_METER_PER_SECOND,
+                MAX_ANGULAR_VELOCITY_RAD_PER_SECOND, MAX_ANGULAR_ACCELERATION_RAD_PER_SECOND);
     }
     public static final class ModuleConstants {
 
