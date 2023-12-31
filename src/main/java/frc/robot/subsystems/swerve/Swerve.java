@@ -2,16 +2,16 @@ package frc.robot.subsystems.swerve;
 
 import com.kauailabs.navx.frc.AHRS;
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.path.GoalEndState;
+import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.ReplanningConfig;
-import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
 import edu.wpi.first.math.interpolation.Interpolator;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
@@ -24,15 +24,11 @@ import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.Limelight;
-import org.photonvision.EstimatedRobotPose;
-import org.photonvision.PhotonPoseEstimator;
 
-import java.io.IOException;
-import java.util.Optional;
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
@@ -332,6 +328,21 @@ public class Swerve extends SubsystemBase {
         field.setRobotPose(odometry.getEstimatedPosition());
 //        SmartDashboard.putData(field);
     }
+
+    // on-the-fly auto generation functions
+    public Command followPath(List<Translation2d> bezierPoints, double endVel, double endDegrees){
+        return AutoBuilder.followPathWithEvents(
+                new PathPlannerPath(bezierPoints, PATH_CONSTRAINTS, getGoalEndState(endVel, endDegrees)));
+    }
+
+    public List<Translation2d> getBezierPoints(Translation2d... points){
+        return List.of(points);
+    }
+
+    public GoalEndState getGoalEndState(double vel, double degrees){
+        return new GoalEndState(vel, Rotation2d.fromDegrees(degrees));
+    }
+    // ----------
 
     private void initShuffleboardData() {
         var swerveTab = Shuffleboard.getTab("Swerve");

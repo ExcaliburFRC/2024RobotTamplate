@@ -5,11 +5,9 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.commands.PathPlannerAuto;
-import com.pathplanner.lib.path.PathConstraints;
-import com.pathplanner.lib.path.PathPlannerPath;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
@@ -67,6 +65,6 @@ public class RobotContainer {
 
   public Command getAutonomousCommand() {
 //    return new PathPlannerAuto("Auto1");
-    return AutoBuilder.pathfindToPose(new Pose2d(0, 0, Rotation2d.fromDegrees(0)), PATH_CONSTRAINTS);
+    return swerve.followPath(swerve.getBezierPoints(new Translation2d(0, 0)), 0, 0);
   }
 }
