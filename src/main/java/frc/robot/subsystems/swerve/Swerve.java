@@ -28,9 +28,6 @@ import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.Limelight;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
@@ -336,7 +333,7 @@ public class Swerve extends SubsystemBase {
     public Command followPath(double endVel, double endDegrees, Pose2d... positions){
         return AutoBuilder.followPathWithEvents(
                         new PathPlannerPath(
-                                PathPlannerPath.bezierFromPoses(getPositions(positions)),
+                                PathPlannerPath.bezierFromPoses(positions),
                                 PATH_CONSTRAINTS,
                                 new GoalEndState(endVel, Rotation2d.fromDegrees(endDegrees))))
                 .until(()-> positions[positions.length -1].getTranslation().getDistance(odometry.getEstimatedPosition().getTranslation()) < 0.15);
@@ -346,12 +343,20 @@ public class Swerve extends SubsystemBase {
         return followPath(0, 0, new Pose2d(0,0, Rotation2d.fromDegrees(0)));
     }
 
-    private ArrayList<Pose2d> getPositions(Pose2d... poses){
-        ArrayList<Pose2d> arrayList = new ArrayList<>();
-        arrayList.add(odometry.getEstimatedPosition());
-        arrayList.addAll(Arrays.asList(poses));
+    // drives the robot in a straight line from current location to a given Pose2d
+    public Command robotToPose(Pose2d position, double endVel){
+        return followPath(endVel, position.getRotation().getDegrees(), getStraightLinePoses(position.getTranslation()));
+    }
 
-        return arrayList;
+    private Pose2d[] getStraightLinePoses(Translation2d setpoint){
+        Translation2d current = odometry.getEstimatedPosition().getTranslation();
+        Rotation2d directionOfTravel = setpoint.minus(current).getAngle();
+
+        Pose2d[] poses = new Pose2d[2];
+        poses[0] = new Pose2d(current, directionOfTravel);
+        poses[1] = new Pose2d(setpoint, directionOfTravel.minus(Rotation2d.fromDegrees(180)));
+
+        return poses;
     }
     // ----------
 
