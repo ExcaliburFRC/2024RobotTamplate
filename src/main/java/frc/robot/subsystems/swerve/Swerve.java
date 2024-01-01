@@ -2,16 +2,16 @@ package frc.robot.subsystems.swerve;
 
 import com.kauailabs.navx.frc.AHRS;
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.path.GoalEndState;
-import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.ReplanningConfig;
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
 import edu.wpi.first.math.interpolation.Interpolator;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
@@ -24,13 +24,13 @@ import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.Limelight;
+import org.photonvision.PhotonPoseEstimator;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.io.IOException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
@@ -74,7 +74,7 @@ public class Swerve extends SubsystemBase {
     private final AHRS _gyro = new AHRS(SPI.Port.kMXP);
 
     private final PIDController anglePIDcontroller = new PIDController(ANGLE_GAINS.kp, ANGLE_GAINS.ki, ANGLE_GAINS.kd);
-    private final PIDController translationPIDcontroller = new PIDController(PATHPLANNER_TRANSLATION_GAINS.kp, PATHPLANNER_TRANSLATION_GAINS.ki, PATHPLANNER_TRANSLATION_GAINS.kd);
+    private final PIDController translationPIDcontroller = new PIDController(TRANSLATION_GAINS.kp, TRANSLATION_GAINS.ki, TRANSLATION_GAINS.kd);
 
     private final SwerveDrivePoseEstimator odometry = new SwerveDrivePoseEstimator(
             kSwerveKinematics,
@@ -82,16 +82,17 @@ public class Swerve extends SubsystemBase {
             getModulesPositions(),
             new Pose2d());
 
+    private final PhotonPoseEstimator poseEstimator;
+
     private final Field2d field = new Field2d();
-    private final Limelight limelight = Limelight.INSTANCE;
+
+    private final Limelight ll = Limelight.INSTANCE;
 
     private GenericEntry maxSpeed = Shuffleboard.getTab("Swerve").add("speedPercent", DRIVE_SPEED_PERCENTAGE).withPosition(2, 0).withSize(2, 2).getEntry();
 
     private final InterpolatingTreeMap interpolate = new InterpolatingTreeMap(InverseInterpolator.forDouble(), Interpolator.forDouble());
 
-    private boolean isClosedloop = true;
-
-    public Swerve(){
+    public Swerve() {
         resetGyroHardware();
 
         AutoBuilder.configureHolonomic(
@@ -100,12 +101,13 @@ public class Swerve extends SubsystemBase {
                 this::getRobotRelativeSpeeds,
                 this::driveRobotRelative,
                 new HolonomicPathFollowerConfig(
-                        new PIDConstants(PATHPLANNER_TRANSLATION_GAINS.kp, 0.0, PATHPLANNER_TRANSLATION_GAINS.kd),
-                        new PIDConstants(PATHPLANNER_ANGLE_GAINS.kp, 0.0, PATHPLANNER_ANGLE_GAINS.kd),
+                        new PIDConstants(TRANSLATION_GAINS.kp, 0.0, TRANSLATION_GAINS.kd),
+                        new PIDConstants(ANGLE_GAINS.kp, 0.0, ANGLE_GAINS.kd),
                         MAX_VELOCITY_METER_PER_SECOND,
                         Math.sqrt(2) * TRACK_WIDTH, // needs to change for a non-square swerve
                         new ReplanningConfig()
-                ), this
+                ),
+                this
         );
 
         odometry.resetPosition(getGyroRotation2d(), getModulesPositions(), new Pose2d(0, 0, new Rotation2d()));
@@ -116,6 +118,16 @@ public class Swerve extends SubsystemBase {
 
         interpolate.put(1.0, 0.2);
         interpolate.put(-1.0, 1.0);
+
+        try {
+            poseEstimator = new PhotonPoseEstimator(
+                    AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile),
+                    PhotonPoseEstimator.PoseStrategy.AVERAGE_BEST_TARGETS,
+                    new Transform3d()
+            );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         initShuffleboardData();
     }
@@ -150,7 +162,7 @@ public class Swerve extends SubsystemBase {
         return odometry.getEstimatedPosition().getRotation();
     }
 
-    public ChassisSpeeds getRobotRelativeSpeeds() {
+    public ChassisSpeeds getRobotRelativeSpeeds(){
         return kSwerveKinematics.toChassisSpeeds(getModulesStates());
     }
 
@@ -181,16 +193,14 @@ public class Swerve extends SubsystemBase {
                 .andThen(
                         this.runEnd(
                                 () -> {
-                                    double xSpeed = xSpeedSupplier.getAsDouble(), ySpeed = ySpeedSupplier.getAsDouble(), spinningSpeed = spinningSpeedSupplier.getAsDouble();
+                                    double spinning = turnToAngle.getAsDouble() == -1 ? spinningSpeedSupplier.getAsDouble() : getAngleDC(turnToAngle.getAsDouble());
 
-                                    if (!isClosedloop) {
-                                        double spinning = turnToAngle.getAsDouble() == -1 ? spinningSpeedSupplier.getAsDouble() : getAngleDC(turnToAngle.getAsDouble());
+                                    //create the speeds for x,y and spin
+                                    double xSpeed = xSpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble()),
+                                            ySpeed = ySpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble()),
+                                            spinningSpeed = spinning * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
 
-                                        //create the speeds for x,y and spin
-                                        xSpeed = xSpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
-                                        ySpeed = ySpeedSupplier.getAsDouble() * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
-                                        spinningSpeed = spinning * MAX_VELOCITY_METER_PER_SECOND / 100 * maxSpeed.getDouble(DRIVE_SPEED_PERCENTAGE) * (double) interpolate.get(decelerator.getAsDouble());
-                                    }
+                                    // **all credits to the decelerator idea are for Ofir from trigon #5990 (ohfear_ on discord)**
 
                                     // create a CassisSpeeds object and apply it the speeds
                                     ChassisSpeeds chassisSpeeds = fieldOriented.getAsBoolean() ?
@@ -219,7 +229,7 @@ public class Swerve extends SubsystemBase {
         return driveSwerveCommand(speed, () -> 0, turn, () -> fieldOriented);
     }
 
-    private void driveRobotRelative(ChassisSpeeds chassisSpeeds) {
+    private void driveRobotRelative(ChassisSpeeds chassisSpeeds){
         setModulesStates(kSwerveKinematics.toSwerveModuleStates(chassisSpeeds));
     }
 
@@ -244,12 +254,11 @@ public class Swerve extends SubsystemBase {
     }
 
     public Command turnToAngleCommand(double setpoint) {
-        return setClosedLoop(true).andThen(
+        return new InstantCommand(() -> anglePIDcontroller.setSetpoint(setpoint)).andThen(
                 driveSwerveCommand(
                         () -> 0, () -> 0,
                         () -> anglePIDcontroller.calculate(getOdometryRotation2d().getDegrees(), setpoint),
-                        () -> false).until(new Trigger(anglePIDcontroller::atSetpoint).debounce(0.1)),
-                setClosedLoop(false));
+                        () -> false).until(new Trigger(anglePIDcontroller::atSetpoint).debounce(0.1)));
     }
 
     /**
@@ -291,7 +300,6 @@ public class Swerve extends SubsystemBase {
                 swerveModules[3].getPosition(),
         };
     }
-
     public SwerveModuleState[] getModulesStates() {
         return new SwerveModuleState[]{
                 swerveModules[0].getState(),
@@ -314,46 +322,16 @@ public class Swerve extends SubsystemBase {
                 .ignoringDisable(true);
     }
 
-    public Command setClosedLoop(boolean isCloseLoop) {
-        return new InstantCommand(() -> this.isClosedloop = isCloseLoop);
-    }
-
     @Override
     public void periodic() {
         odometry.update(getGyroRotation2d(), getModulesPositions());
+        field.setRobotPose(poseEstimator.getReferencePose().toPose2d());
+        SmartDashboard.putData(field);
 
-//        Optional<EstimatedRobotPose> pose = limelight.getEstimatedGlobalPose(odometry.getEstimatedPosition());
-//        System.out.println(pose.isEmpty());
-//        if (!pose.isEmpty()) odometry.addVisionMeasurement(pose.get().estimatedPose.toPose2d(), pose.get().timestampSeconds);
-//
-        field.setRobotPose(odometry.getEstimatedPosition());
-//        SmartDashboard.putData(field);
+        ll.updateFromAprilTagPose(odometry::addVisionMeasurement);
 
-        System.out.println(odometry.getEstimatedPosition().toString());
+        poseEstimator.update(Limelight.INSTANCE.getLatestResualt());
     }
-
-    // on-the-fly auto generation functions
-    public Command followPath(double endVel, double endDegrees, Pose2d... positions){
-        return AutoBuilder.followPathWithEvents(
-                new PathPlannerPath(
-                        PathPlannerPath.bezierFromPoses(getPositions(positions)),
-                        PATH_CONSTRAINTS,
-                        new GoalEndState(endVel, Rotation2d.fromDegrees(endDegrees))))
-                .until(()-> positions[positions.length -1].getTranslation().getDistance(odometry.getEstimatedPosition().getTranslation()) < 0.15);
-    }
-
-    public Command followPath(){
-        return followPath(0, 0, new Pose2d(0,0, Rotation2d.fromDegrees(0)));
-    }
-
-    private ArrayList<Pose2d> getPositions(Pose2d... poses){
-        ArrayList<Pose2d> arrayList = new ArrayList<>();
-        arrayList.add(odometry.getEstimatedPosition());
-        arrayList.addAll(Arrays.asList(poses));
-
-        return arrayList;
-    }
-    // ----------
 
     private void initShuffleboardData() {
         var swerveTab = Shuffleboard.getTab("Swerve");
