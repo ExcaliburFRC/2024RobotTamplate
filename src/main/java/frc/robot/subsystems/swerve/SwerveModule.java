@@ -28,7 +28,7 @@ public class SwerveModule implements Sendable {
   //a pid controller for the angle of the module
   private final PIDController _spinningPIDController;
 
-  public Trigger isReset = new Trigger(()-> Math.abs(getResetRad()) < TOLORANCE).debounce(0.1);
+  public Trigger isReset = new Trigger(()-> Math.abs(getResetRad()) < TOLERANCE).debounce(0.1);
 
   // construct the class
   public SwerveModule(
@@ -111,7 +111,7 @@ public class SwerveModule implements Sendable {
   }
 
   public void spinTo(double setpoint){
-    if (Math.abs(getResetRad() - setpoint) > TOLORANCE) {
+    if (Math.abs(getResetRad() - setpoint) > TOLERANCE) {
       _angleMotor.set(-_spinningPIDController.calculate(setpoint, getResetRad()));
     }
     else {

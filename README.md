@@ -1,7 +1,7 @@
 # TODO List
 
 <ul>
-  <li style="background-color: black; color: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); margin: 10px 0; padding: 15px; transition: background-color 0.3s ease;">
+  <li style="background-color: black; color: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(1, 34, 101, 1); margin: 10px 0; padding: 15px; transition: background-color 0.3s ease;">
     Swerve goes faster when decreasing max velocity
   </li>
   <li style="background-color: black; color: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); margin: 10px 0; padding: 15px; transition: background-color 0.3s ease;">
