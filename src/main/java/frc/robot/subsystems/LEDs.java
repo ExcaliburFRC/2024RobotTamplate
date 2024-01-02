@@ -10,6 +10,7 @@ import frc.lib.Color;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static frc.lib.Color.Colors.OFF;
@@ -136,6 +137,17 @@ public class LEDs extends SubsystemBase {
                         .andThen(new WaitCommand(0.01)).repeatedly()
                         .withName("TRAIN_CIRCLE, main: " + mainColor.toString() + ", accent: " + accentColor.toString());
                 break;
+
+            case RAINBOW:
+                AtomicInteger firstHue = new AtomicInteger(0);
+                command = this.run(()->{
+                    for (var i = 0; i < LENGTH; i++) {
+                        final var hue = (firstHue.get() + (i * 180 / LENGTH)) % 180;
+                        buffer.setHSV(i, hue, 255, 128);
+                    }
+                    firstHue.addAndGet(3);
+                    firstHue.set(firstHue.get() % 180);
+                });
 
             default:
                 break;
