@@ -22,11 +22,8 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.LEDs;
 import frc.robot.subsystems.swerve.Swerve;
 
-import java.util.List;
-
 import static edu.wpi.first.math.MathUtil.applyDeadband;
 import static frc.lib.Color.Colors.WHITE;
-import static frc.robot.Constants.SwerveConstants.PATH_CONSTRAINTS;
 import static frc.robot.subsystems.LEDs.LEDPattern.SOLID;
 
 public class RobotContainer {
@@ -55,7 +52,7 @@ public class RobotContainer {
 
     controller.PS().onTrue(swerve.resetOdometryAngleCommand());
 
-    controller.cross().onTrue(swerve.followPath());
+    controller.cross().onTrue(swerve.robotToPose(new Pose2d(0.1, 0, Rotation2d.fromDegrees(0)), 0));
   }
 
   public double getAngleFromButtons(Trigger triangle, Trigger circle, Trigger cross, Trigger square){
@@ -75,7 +72,7 @@ public class RobotContainer {
   }
 
   public Command getAutonomousCommand() {
-//    return AutoBuilder.followPathWithEvents(path);
-    return swerve.followPath();
+    return new PathPlannerAuto("Auto1");
+//    return swerve.robotToPose(new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 0);
   }
 }

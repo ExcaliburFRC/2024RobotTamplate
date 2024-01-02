@@ -94,7 +94,7 @@ public class Swerve extends SubsystemBase {
 
     private final InterpolatingTreeMap interpolate = new InterpolatingTreeMap(InverseInterpolator.forDouble(), Interpolator.forDouble());
 
-    private boolean isClosedloop = true;
+    private boolean isClosedloop = false;
 
     public Swerve(){
         resetGyroHardware();
@@ -331,7 +331,7 @@ public class Swerve extends SubsystemBase {
 //        if (!pose.isEmpty()) odometry.addVisionMeasurement(pose.get().estimatedPose.toPose2d(), pose.get().timestampSeconds);
 
         // localization with SwervePoseEstimator
-        if (limelight.getLatestResualt().hasTargets()) limelight.updateFromAprilTagPose(odometry::addVisionMeasurement);
+//        if (limelight.getLatestResualt().hasTargets()) limelight.updateFromAprilTagPose(odometry::addVisionMeasurement);
 
         field.setRobotPose(odometry.getEstimatedPosition());
         SmartDashboard.putData(field);
@@ -343,12 +343,7 @@ public class Swerve extends SubsystemBase {
                         new PathPlannerPath(
                                 PathPlannerPath.bezierFromPoses(positions),
                                 PATH_CONSTRAINTS,
-                                new GoalEndState(endVel, Rotation2d.fromDegrees(endDegrees))))
-                .until(()-> positions[positions.length -1].getTranslation().getDistance(odometry.getEstimatedPosition().getTranslation()) < 0.15);
-    }
-
-    public Command followPath(){
-        return followPath(0, 0, new Pose2d(0,0, Rotation2d.fromDegrees(0)));
+                                new GoalEndState(endVel, Rotation2d.fromDegrees(endDegrees))));
     }
 
     // drives the robot in a straight line from current location to a given Pose2d
@@ -360,11 +355,10 @@ public class Swerve extends SubsystemBase {
         Translation2d current = odometry.getEstimatedPosition().getTranslation();
         Rotation2d directionOfTravel = setpoint.minus(current).getAngle();
 
-        Pose2d[] poses = new Pose2d[2];
-        poses[0] = new Pose2d(current, directionOfTravel);
-        poses[1] = new Pose2d(setpoint, directionOfTravel.minus(Rotation2d.fromDegrees(180)));
-
-        return poses;
+        return new Pose2d[]{
+                new Pose2d(current, directionOfTravel),
+                new Pose2d(setpoint, directionOfTravel)
+        };
     }
     // ----------
 

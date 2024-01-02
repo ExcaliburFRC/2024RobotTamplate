@@ -78,7 +78,7 @@ public final class Constants {
         public static final Gains ANGLE_GAINS = new Gains(0.07, 0, 1.0E-04);
         public static final Gains TRANSLATION_GAINS = new Gains(0.07, 0, 1.0E-04);
 
-        public static final Gains PATHPLANNER_ANGLE_GAINS = new Gains(3.25, 0, 0);
+        public static final Gains PATHPLANNER_ANGLE_GAINS = new Gains(3.5, 0, 0);
         public static final Gains PATHPLANNER_TRANSLATION_GAINS = new Gains(2.5, 0, 0);
 
         public static final PathConstraints PATH_CONSTRAINTS = new PathConstraints(
