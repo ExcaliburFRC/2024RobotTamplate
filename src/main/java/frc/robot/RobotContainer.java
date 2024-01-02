@@ -5,7 +5,10 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.pathplanner.lib.commands.PathfindHolonomic;
+import com.pathplanner.lib.path.GoalEndState;
+import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.path.PathPlannerPath;
 import com.pathplanner.lib.path.PathPlannerTrajectory;
 import com.pathplanner.lib.pathfinding.Pathfinding;
@@ -18,6 +21,8 @@ import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.subsystems.LEDs;
 import frc.robot.subsystems.swerve.Swerve;
+
+import java.util.List;
 
 import static edu.wpi.first.math.MathUtil.applyDeadband;
 import static frc.lib.Color.Colors.WHITE;
@@ -70,7 +75,7 @@ public class RobotContainer {
   }
 
   public Command getAutonomousCommand() {
-//    return new PathPlannerAuto("Auto1");
-    return swerve.followPath(0, 0, new Pose2d(0, 0, Rotation2d.fromDegrees(0)));
+//    return AutoBuilder.followPathWithEvents(path);
+    return swerve.followPath();
   }
 }

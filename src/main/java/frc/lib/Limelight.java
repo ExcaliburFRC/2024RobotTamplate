@@ -10,22 +10,23 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.targeting.PhotonPipelineResult;
 
+import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
 public class Limelight {
-    PhotonCamera camera = new PhotonCamera("limelight");
+    PhotonCamera camera = new PhotonCamera("bob");
     AprilTagFieldLayout fieldLayout;
 
     private PhotonPoseEstimator photonPoseEstimator;
 
     private final Transform3d robotToCamera = new Transform3d();
 
-    public static Limelight INSTANCE;// = new Limelight();
+    public static Limelight INSTANCE = new Limelight();
 
     private Limelight() {
-        camera.setDriverMode(false);
+        camera.setDriverMode(true);
 
         try {
             fieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile);
@@ -56,8 +57,26 @@ public class Limelight {
     }
 
     public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Pose2d prevEstimatedRobotPose) {
-        photonPoseEstimator.setReferencePose(prevEstimatedRobotPose);
-        return photonPoseEstimator.update();
+        if (camera.getLatestResult().hasTargets()) {
+            photonPoseEstimator.setReferencePose(prevEstimatedRobotPose);
+            return photonPoseEstimator.update();
+        }
+
+        return Optional.empty();
+    }
+
+    public boolean updateFromAprilTagPose(BiConsumer<Pose2d, Double> toUpdate) {
+        var result = camera.getLatestResult();
+        if (!result.hasTargets()) return false;
+
+        var id = result.getBestTarget().getFiducialId();
+        if (id == -1) return false;
+
+        var tag = fieldLayout.getTagPose(id);
+        if (tag.isEmpty()) return false;
+
+        toUpdate.accept(tag.get().plus(result.getBestTarget().getBestCameraToTarget()).toPose2d(), result.getTimestampSeconds());
+        return true;
     }
 }
 

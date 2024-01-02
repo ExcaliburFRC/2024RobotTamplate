@@ -11,6 +11,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
 import edu.wpi.first.math.interpolation.Interpolator;
@@ -24,10 +25,17 @@ import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.*;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.lib.Limelight;
+import org.photonvision.EstimatedRobotPose;
+import org.photonvision.PhotonCamera;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
@@ -91,7 +99,7 @@ public class Swerve extends SubsystemBase {
     public Swerve(){
         resetGyroHardware();
 
-        AutoBuilder.configureHolonomic(
+       AutoBuilder.configureHolonomic(
                 this::getPose2d,
                 this::setPose2d,
                 this::getRobotRelativeSpeeds,
@@ -100,7 +108,7 @@ public class Swerve extends SubsystemBase {
                         new PIDConstants(PATHPLANNER_TRANSLATION_GAINS.kp, 0.0, PATHPLANNER_TRANSLATION_GAINS.kd),
                         new PIDConstants(PATHPLANNER_ANGLE_GAINS.kp, 0.0, PATHPLANNER_ANGLE_GAINS.kd),
                         MAX_VELOCITY_METER_PER_SECOND,
-                        Math.sqrt(2) * TRACK_WIDTH, // needs to change for a non-square swerve
+                        Math.sqrt(2) * (TRACK_WIDTH/2), // needs to change for a non-square swerve
                         new ReplanningConfig()
                 ), this
         );
@@ -319,14 +327,14 @@ public class Swerve extends SubsystemBase {
     public void periodic() {
         odometry.update(getGyroRotation2d(), getModulesPositions());
 
-//        Optional<EstimatedRobotPose> pose = limelight.getEstimatedGlobalPose(odometry.getEstimatedPosition());
-//        System.out.println(pose.isEmpty());
+        // localization with PhotonPoseEstimator
 //        if (!pose.isEmpty()) odometry.addVisionMeasurement(pose.get().estimatedPose.toPose2d(), pose.get().timestampSeconds);
-//
-        field.setRobotPose(odometry.getEstimatedPosition());
-//        SmartDashboard.putData(field);
 
-        System.out.println(odometry.getEstimatedPosition().toString());
+        // localization with SwervePoseEstimator
+        if (limelight.getLatestResualt().hasTargets()) limelight.updateFromAprilTagPose(odometry::addVisionMeasurement);
+
+        field.setRobotPose(odometry.getEstimatedPosition());
+        SmartDashboard.putData(field);
     }
 
     // on-the-fly auto generation functions
