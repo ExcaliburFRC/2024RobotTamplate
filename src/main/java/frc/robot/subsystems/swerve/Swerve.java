@@ -108,7 +108,8 @@ public class Swerve extends SubsystemBase {
                         new PIDConstants(PATHPLANNER_TRANSLATION_GAINS.kp, 0.0, PATHPLANNER_TRANSLATION_GAINS.kd),
                         new PIDConstants(PATHPLANNER_ANGLE_GAINS.kp, 0.0, PATHPLANNER_ANGLE_GAINS.kd),
                         MAX_VELOCITY_METER_PER_SECOND,
-                        Math.sqrt(2) * (TRACK_WIDTH/2), // needs to change for a non-square swerve
+//                        Math.sqrt(2) * (TRACK_WIDTH/2), // needs to change for a non-square swerve
+                        Math.sqrt(Math.pow(TRACK_WIDTH, 2) / 2), // needs to change for a non-square swerve
                         new ReplanningConfig()
                 ), this
         );
