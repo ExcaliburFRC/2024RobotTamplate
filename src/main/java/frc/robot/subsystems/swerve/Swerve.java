@@ -343,7 +343,7 @@ public class Swerve extends SubsystemBase {
                         new PathPlannerPath(
                                 PathPlannerPath.bezierFromPoses(positions),
                                 PATH_CONSTRAINTS,
-                                new GoalEndState(endVel, Rotation2d.fromDegrees(endDegrees))));
+                                new GoalEndState(endVel, Rotation2d.fromDegrees(endDegrees)))).asProxy();
     }
 
     // drives the robot in a straight line from current location to a given Pose2d
