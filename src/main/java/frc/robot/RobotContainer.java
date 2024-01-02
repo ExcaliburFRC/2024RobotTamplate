@@ -52,7 +52,7 @@ public class RobotContainer {
 
     controller.PS().onTrue(swerve.resetOdometryAngleCommand());
 
-    controller.cross().onTrue(swerve.robotToPose(new Pose2d(0.1, 0, Rotation2d.fromDegrees(0)), 0));
+    controller.cross().onTrue(swerve.robotToPose(new Pose2d(0, 0, Rotation2d.fromDegrees(0)), 0));
   }
 
   public double getAngleFromButtons(Trigger triangle, Trigger circle, Trigger cross, Trigger square){
