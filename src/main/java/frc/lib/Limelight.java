@@ -16,14 +16,14 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 public class Limelight {
-    PhotonCamera camera = new PhotonCamera("bob");
+    PhotonCamera camera;// = new PhotonCamera("bob");
     AprilTagFieldLayout fieldLayout;
 
     private PhotonPoseEstimator photonPoseEstimator;
 
     private final Transform3d robotToCamera = new Transform3d();
 
-    public static Limelight INSTANCE = new Limelight();
+    public static Limelight INSTANCE;// = new Limelight();
 
     private Limelight() {
         camera.setDriverMode(true);
