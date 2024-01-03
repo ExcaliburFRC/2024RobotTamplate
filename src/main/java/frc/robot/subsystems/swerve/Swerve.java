@@ -160,9 +160,9 @@ public class Swerve extends SubsystemBase {
     }
 
     public Command setOdometryAngleCommand(double angle) {
-        return setOdometryPositionCommand(
-                new Pose2d(odometry.getEstimatedPosition().getTranslation(), Rotation2d.fromDegrees(angle)))
-                .ignoringDisable(true);
+        return new ProxyCommand(()->
+                setOdometryPositionCommand(
+                        new Pose2d(odometry.getEstimatedPosition().getTranslation(), Rotation2d.fromDegrees(angle))).ignoringDisable(true));
     }
 
     public Command resetOdometryAngleCommand() {
