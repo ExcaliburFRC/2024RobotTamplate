@@ -8,7 +8,9 @@ import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
 import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.ReplanningConfig;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
 import edu.wpi.first.math.interpolation.Interpolator;
@@ -17,7 +19,9 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
@@ -30,7 +34,6 @@ import frc.robot.util.AllianceUtilities;
 import org.photonvision.EstimatedRobotPose;
 
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
@@ -73,8 +76,12 @@ public class Swerve extends SubsystemBase {
 
     private final AHRS _gyro = new AHRS(SPI.Port.kMXP);
 
-    private final PIDController anglePIDcontroller = new PIDController(ANGLE_GAINS.kp, ANGLE_GAINS.ki, ANGLE_GAINS.kd);
-    private final PIDController translationPIDcontroller = new PIDController(PATHPLANNER_TRANSLATION_GAINS.kp, PATHPLANNER_TRANSLATION_GAINS.ki, PATHPLANNER_TRANSLATION_GAINS.kd);
+    private final ProfiledPIDController anglePIDcontroller = new ProfiledPIDController(
+            ANGLE_GAINS.kp, ANGLE_GAINS.ki, ANGLE_GAINS.kd,
+            new TrapezoidProfile.Constraints(MAX_VELOCITY_METER_PER_SECOND, MAX_VELOCITY_ACCELERATION_METER_PER_SECOND));
+
+    private final PIDController xTranslationPIDcontroller = new PIDController(PATHPLANNER_TRANSLATION_GAINS.kp, PATHPLANNER_TRANSLATION_GAINS.ki, PATHPLANNER_TRANSLATION_GAINS.kd);
+    private final PIDController yTranslationPIDcontroller = new PIDController(PATHPLANNER_TRANSLATION_GAINS.kp, PATHPLANNER_TRANSLATION_GAINS.ki, PATHPLANNER_TRANSLATION_GAINS.kd);
 
     private final SwerveDrivePoseEstimator odometry = new SwerveDrivePoseEstimator(
             kSwerveKinematics,
@@ -83,6 +90,7 @@ public class Swerve extends SubsystemBase {
             new Pose2d());
 
     private final Field2d field = new Field2d();
+
 //    private final Limelight limelight = Limelight.INSTANCE;
 
     private GenericEntry maxSpeed = Shuffleboard.getTab("Swerve").add("speedPercent", DRIVE_SPEED_PERCENTAGE).withPosition(2, 0).withSize(2, 2).getEntry();
@@ -156,11 +164,11 @@ public class Swerve extends SubsystemBase {
     }
 
     public Command setOdometryPositionCommand(Pose2d pose) {
-        return new InstantCommand(() -> setPose2d(pose));
+        return new InstantCommand(() -> setPose2d(pose)).ignoringDisable(true);
     }
 
     public Command setOdometryAngleCommand(double angle) {
-        return new ProxyCommand(()->
+        return new ProxyCommand(() ->
                 setOdometryPositionCommand(
                         new Pose2d(odometry.getEstimatedPosition().getTranslation(), Rotation2d.fromDegrees(angle))).ignoringDisable(true));
     }
@@ -325,13 +333,18 @@ public class Swerve extends SubsystemBase {
 
         // localization with PhotonPoseEstimator
 //        Optional<EstimatedRobotPose> pose = limelight.getEstimatedGlobalPose(odometry.getEstimatedPosition());
-        //if (!pose.isEmpty()) odometry.addVisionMeasurement(pose.get().estimatedPose.toPose2d(), pose.get().timestampSeconds);
+//        if (pose.isPresent()) odometry.addVisionMeasurement(pose.get().estimatedPose.toPose2d(), pose.get().timestampSeconds);
 
         // localization with SwervePoseEstimator
 //        if (limelight.getLatestResualt().hasTargets()) limelight.updateFromAprilTagPose(odometry::addVisionMeasurement);
 
         field.setRobotPose(odometry.getEstimatedPosition());
         SmartDashboard.putData(field);
+
+        if (DriverStation.isEnabled()) {
+            System.out.println(getPose2d());
+            System.out.println(xTranslationPIDcontroller.calculate(getPose2d().getX(), 0));
+        }
     }
 
     // on-the-fly auto generation functions
@@ -345,12 +358,18 @@ public class Swerve extends SubsystemBase {
     }
 
     // drives the robot from current location to a given Pose2d
-    public Command robotToPose(Pose2d position, double endVel) {
-        return new ProxyCommand(()-> followPath(endVel, position.getRotation().getDegrees(), getStraightLinePoses(position.getTranslation())));
+    public Command pathPlannerToPose(Pose2d position, double endVel) {
+        return new ProxyCommand(() ->
+                followPath(endVel, position.getRotation().getDegrees(),
+                        getStraightLinePoses(position.getTranslation()))
+        );
     }
 
-    public Pose2d[] getAlliancePositions(Pose2d... poses){
-        for (int i = 0; i < poses.length; i++) poses[i] = AllianceUtilities.toAlliancePose(poses[i]);
+    public Pose2d[] getAlliancePositions(Pose2d... poses) {
+        for (int i = 0; i < poses.length; i++) {
+            poses[i] = AllianceUtilities.toAlliancePose(poses[i]);
+            System.out.println(poses[i]);
+        }
         return poses;
     }
 
@@ -364,7 +383,25 @@ public class Swerve extends SubsystemBase {
         };
     }
 
-    public Command doABunchOfCoolStuffWithTheRobotCommand(){
+    public Command pidToPose(Pose2d setpoint) {
+        SlewRateLimiter slewX = new SlewRateLimiter(2);
+        SlewRateLimiter slewY = new SlewRateLimiter(2);
+
+        Trigger atSetpointTrigger = new Trigger(() ->
+                getPose2d().getTranslation().getDistance(setpoint.getTranslation()) < 0.05 &&
+                        Math.abs(getPose2d().getRotation().minus(setpoint.getRotation()).getDegrees()) < 3).debounce(0.25);
+
+        return new RunCommand(() -> driveRobotRelative(
+                ChassisSpeeds.fromFieldRelativeSpeeds(
+                        new ChassisSpeeds(
+                        slewX.calculate(xTranslationPIDcontroller.calculate(getPose2d().getX(), setpoint.getX())),
+                        slewY.calculate(yTranslationPIDcontroller.calculate(getPose2d().getY(), setpoint.getY())),
+                        anglePIDcontroller.calculate(getPose2d().getRotation().getDegrees(), setpoint.getRotation().getDegrees())),
+                        getGyroRotation2d())),
+                this).until(atSetpointTrigger);
+    }
+
+    public Command doABunchOfCoolStuffWithTheRobotCommand() {
         return new PrintCommand("A bunch of cool stuff just happened");
     }
     // ----------

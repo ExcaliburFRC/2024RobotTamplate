@@ -10,7 +10,6 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.targeting.PhotonPipelineResult;
 
-import javax.swing.text.html.Option;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.function.BiConsumer;
@@ -23,7 +22,7 @@ public class Limelight {
 
     private final Transform3d robotToCamera = new Transform3d();
 
-    public static Limelight INSTANCE;// = new Limelight();
+    public static Limelight INSTANCE = new Limelight();
 
     private Limelight() {
         camera.setDriverMode(true);
